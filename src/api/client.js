@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Get base API URL from local storage or environment or fallback to relative/default
 export const getBaseApiUrl = () => {
-  return localStorage.getItem('customApiUrl') || import.meta.env.VITE_API_BASE_URL || 'https://medpathapi.smartschoolnepal.com/api/v1';
+  return   'https://medpathapi.smartschoolnepal.com/api/v1';
 };
 const baseApiUrl = "https://medpathapi.smartschoolnepal.com/api/v1";
 export const apiClient = axios.create({

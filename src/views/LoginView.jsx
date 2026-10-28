@@ -123,7 +123,7 @@ export const LoginView = () => {
                 </div>
               </div>
 
-              {/* Quick Demo Fill Pill */}
+              {/* Quick Demo Fill Pill
               <button
                 type="button"
                 onClick={fillDemoAdmin}
@@ -132,7 +132,7 @@ export const LoginView = () => {
               >
                 <Sparkles className="w-3 h-3 text-sky-400" />
                 <span>Demo Fill</span>
-              </button>
+              </button> */}
             </div>
 
             {/* Login Form */}
