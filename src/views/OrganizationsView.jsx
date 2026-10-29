@@ -249,13 +249,13 @@ export const OrganizationsView = ({ onOpenOnboardModal, globalSearch }) => {
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
-          <button
+          {/* <button
             onClick={() => handleDeleteTenant(record._id, record.name)}
             className="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/50 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800/40 transition-colors"
             title="Deactivate / Delete"
           >
             <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          </button> */}
         </div>
       ),
     },

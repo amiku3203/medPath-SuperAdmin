@@ -43,7 +43,7 @@ export const Sidebar = ({ collapsed, setCollapsed }) => {
       label: 'Organizations',
       icon: Building2,
       badge: null,
-      disabled: true,
+      disabled:  false,
     },
     {
       key: 'users',
