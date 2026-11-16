@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Table, Tag, Empty, Button, Spin } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { superadminApi } from '../api/client';
+import { superadminApi, getTenantUrl } from '../api/client';
 
 export const DashboardView = ({ onOpenOnboardModal, setActiveTab }) => {
   const navigate = useNavigate();
@@ -95,7 +95,15 @@ export const DashboardView = ({ onOpenOnboardModal, setActiveTab }) => {
           </div>
           <div>
             <div className="font-semibold text-white text-xs">{name}</div>
-            <div className="text-[11px] text-slate-400 font-mono">{record.slug}</div>
+            <a
+              href={getTenantUrl(record.slug)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-sky-400 font-mono hover:underline inline-flex items-center gap-1"
+            >
+              <span>{record.slug}</span>
+              <ArrowUpRight className="w-2.5 h-2.5" />
+            </a>
           </div>
         </div>
       ),

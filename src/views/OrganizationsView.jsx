@@ -8,10 +8,12 @@ import {
   Eye,
   Sliders,
   RefreshCw,
+  ExternalLink,
+  Copy,
 } from 'lucide-react';
 import { Table, Tag, Select, Modal, Drawer, Switch, notification, Empty, Spin, Input } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { superadminApi } from '../api/client';
+import { superadminApi, getTenantUrl } from '../api/client';
 
 export const OrganizationsView = ({ onOpenOnboardModal, globalSearch }) => {
   const navigate = useNavigate();
@@ -156,7 +158,16 @@ export const OrganizationsView = ({ onOpenOnboardModal, globalSearch }) => {
               {name}
             </div>
             <div className="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
-              <span>slug: {record.slug}</span>
+              <a
+                href={getTenantUrl(record.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 hover:text-sky-300 flex items-center gap-1 hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span>{record.slug}</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
               <span className="text-slate-600">•</span>
               <span className="text-slate-500 text-[10px]">ID: {record._id}</span>
             </div>
@@ -375,8 +386,32 @@ export const OrganizationsView = ({ onOpenOnboardModal, globalSearch }) => {
           <div className="space-y-6 text-xs text-slate-300">
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 uppercase text-[10px]">Slug</span>
+                <span className="text-slate-400 uppercase text-[10px]">Subdomain</span>
                 <Tag color="cyan" className="font-mono text-xs">{selectedTenant.slug}</Tag>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 uppercase text-[10px]">Wildcard URL</span>
+                <div className="flex items-center gap-1.5 font-mono text-sky-400 text-[11px]">
+                  <a
+                    href={getTenantUrl(selectedTenant.slug)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline flex items-center gap-1"
+                  >
+                    <span>{getTenantUrl(selectedTenant.slug)}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(getTenantUrl(selectedTenant.slug));
+                      notification.success({ message: 'URL Copied', description: 'Tenant subdomain URL copied to clipboard.' });
+                    }}
+                    className="p-1 hover:text-white rounded text-slate-400 cursor-pointer"
+                    title="Copy URL"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 uppercase text-[10px]">MongoDB Tenant ID</span>

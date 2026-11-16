@@ -8,6 +8,9 @@ export const SettingsView = () => {
   const [apiUrl, setApiUrl] = useState(
     localStorage.getItem('customApiUrl') || 'http://localhost:5000/api/v1'
   );
+  const [baseDomain, setBaseDomain] = useState(
+    localStorage.getItem('customBaseDomain') || 'smartschoolnepal.com'
+  );
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,6 +20,16 @@ export const SettingsView = () => {
     notification.success({
       message: 'API Target Saved',
       description: `Frontend will now route SuperAdmin requests to ${apiUrl}`,
+    });
+  };
+
+  const handleSaveBaseDomain = () => {
+    const cleanDomain = baseDomain.trim().toLowerCase().replace(/^https?:\/\//, '');
+    localStorage.setItem('customBaseDomain', cleanDomain);
+    setBaseDomain(cleanDomain);
+    notification.success({
+      message: 'Base Domain Saved',
+      description: `Subdomains will now route through *.${cleanDomain}`,
     });
   };
 
@@ -83,6 +96,27 @@ export const SettingsView = () => {
               </div>
               <p className="text-[10px] text-slate-500 mt-1">
                 Local: <code>http://localhost:5000/api/v1</code> • Production VPS: <code>https://medpathapi.smartschoolnepal.com/api/v1</code>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1">Platform Base Domain (Wildcards)</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={baseDomain}
+                  onChange={(e) => setBaseDomain(e.target.value)}
+                  placeholder="smartschoolnepal.com or localhost:3000"
+                  className="bg-slate-900 border-slate-700 text-white font-mono text-xs"
+                />
+                <button
+                  onClick={handleSaveBaseDomain}
+                  className="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs shrink-0 cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Subdomains route to: <code>https://&lt;subdomain&gt;.{baseDomain}</code> (e.g. <code>apollo.{baseDomain}</code>)
               </p>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Building2,
   User,
@@ -9,14 +9,24 @@ import {
   Radio,
   Layers,
   Key,
+  AlertCircle,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { Form, Input, Select, InputNumber, Switch, notification } from 'antd';
-import { superadminApi } from '../api/client';
+import { superadminApi, getTenantUrl } from '../api/client';
 
 export const OnboardingView = () => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [deployedTenant, setDeployedTenant] = useState(null);
+  const [subdomainStatus, setSubdomainStatus] = useState({
+    checking: false,
+    available: null,
+    reason: null,
+    message: '',
+  });
+  const checkTimeoutRef = useRef(null);
 
   // Live preview states
   const [previewName, setPreviewName] = useState('');
@@ -31,21 +41,85 @@ export const OnboardingView = () => {
   const [featureAi, setFeatureAi] = useState(true);
   const [featureCert, setFeatureCert] = useState(true);
 
+  // Format subdomain slug
+  const formatSlug = (val) => {
+    return (val || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+/, '')
+      .slice(0, 30);
+  };
+
+  const verifySubdomain = async (slugCandidate) => {
+    const clean = (slugCandidate || '').toLowerCase().trim();
+    if (!clean || clean.length < 3) {
+      setSubdomainStatus({
+        checking: false,
+        available: false,
+        reason: 'TOO_SHORT',
+        message: 'Subdomain must be at least 3 characters',
+      });
+      return;
+    }
+
+    setSubdomainStatus((prev) => ({ ...prev, checking: true }));
+    try {
+      const res = await superadminApi.checkSubdomain(clean);
+      if (res?.data) {
+        setSubdomainStatus({
+          checking: false,
+          available: res.data.available,
+          reason: res.data.reason || null,
+          message: res.data.message || (res.data.available ? 'Subdomain is available' : 'Subdomain unavailable'),
+        });
+      }
+    } catch (err) {
+      const errMsg = err.response?.data?.message || 'Error checking subdomain';
+      setSubdomainStatus({
+        checking: false,
+        available: false,
+        reason: 'CHECK_FAILED',
+        message: errMsg,
+      });
+    }
+  };
+
+  const scheduleSubdomainCheck = (slug) => {
+    if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+    checkTimeoutRef.current = setTimeout(() => {
+      verifySubdomain(slug);
+    }, 400);
+  };
+
   const handleNameChange = (e) => {
     const val = e.target.value || '';
     setPreviewName(val || 'Organization Name');
-    const generatedSlug = val
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-');
+    const generatedSlug = formatSlug(val);
     form.setFieldsValue({ slug: generatedSlug });
     setPreviewSlug(generatedSlug || 'tenant-slug');
+    if (generatedSlug.length >= 3) {
+      scheduleSubdomainCheck(generatedSlug);
+    } else {
+      setSubdomainStatus({ checking: false, available: null, reason: null, message: '' });
+    }
   };
 
   const handleSlugChange = (e) => {
-    const val = e.target.value || '';
+    const val = formatSlug(e.target.value || '');
+    form.setFieldsValue({ slug: val });
     setPreviewSlug(val || 'tenant-slug');
+    if (val.length >= 3) {
+      scheduleSubdomainCheck(val);
+    } else {
+      setSubdomainStatus({
+        checking: false,
+        available: false,
+        reason: 'TOO_SHORT',
+        message: 'Subdomain must be at least 3 characters',
+      });
+    }
   };
 
   const generateRandomPassword = () => {
@@ -63,10 +137,20 @@ export const OnboardingView = () => {
   };
 
   const handleFinish = async (values) => {
+    const cleanSlug = formatSlug(values.slug);
+
+    if (subdomainStatus.available === false) {
+      notification.error({
+        message: 'Invalid Subdomain',
+        description: subdomainStatus.message || 'Please choose an available subdomain before deploying.',
+      });
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
       name: values.name.trim(),
-      slug: values.slug.trim().toLowerCase(),
+      slug: cleanSlug,
       plan: values.plan,
       settings: {
         maxUsers: values.maxUsers || 2000,
@@ -146,15 +230,21 @@ export const OnboardingView = () => {
             </div>
 
             <div className="flex justify-between py-1 border-b border-slate-800/60">
-              <span className="text-slate-500">Tenant Slug:</span>
+              <span className="text-slate-500">Tenant Subdomain:</span>
               <span className="text-white font-semibold">{deployedTenant.slug || deployedTenant.rawPayload?.slug}</span>
             </div>
 
-            <div className="flex justify-between py-1 border-b border-slate-800/60">
+            <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
               <span className="text-slate-500">Subdomain Route:</span>
-              <span className="text-sky-400">
-                https://{deployedTenant.slug || deployedTenant.rawPayload?.slug}.medpath.org
-              </span>
+              <a
+                href={getTenantUrl(deployedTenant.slug || deployedTenant.rawPayload?.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 hover:text-sky-300 underline font-semibold flex items-center gap-1"
+              >
+                <span>{getTenantUrl(deployedTenant.slug || deployedTenant.rawPayload?.slug)}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
 
             <div className="flex justify-between py-1 border-b border-slate-800/60">
@@ -284,11 +374,17 @@ export const OnboardingView = () => {
                   name="slug"
                   label={
                     <span className="text-slate-300 text-xs font-semibold flex items-center justify-between">
-                      <span>Subdomain Slug</span>
+                      <span>Subdomain (Wildcard)</span>
                       <span className="text-[10px] text-slate-500 font-mono">auto-formatted</span>
                     </span>
                   }
-                  rules={[{ required: true, message: 'Please enter unique tenant slug' }]}
+                  rules={[
+                    { required: true, message: 'Please enter unique tenant subdomain' },
+                    {
+                      pattern: /^[a-z0-9](?!.*--)[a-z0-9-]{1,28}[a-z0-9]$/,
+                      message: '3-30 chars, lowercase alphanumeric, hyphens in middle only',
+                    },
+                  ]}
                 >
                   <Input
                     placeholder="e.g. st-jude-academy"
@@ -298,15 +394,40 @@ export const OnboardingView = () => {
                 </Form.Item>
               </div>
 
-              {/* Subdomain Preview Banner */}
-              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between text-xs font-mono">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Globe className="w-4 h-4 text-sky-400" />
-                  <span>Public Route:</span>
+              {/* Subdomain Preview Banner with Real-time Status */}
+              <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-400 truncate">
+                    <Globe className="w-4 h-4 text-sky-400 shrink-0" />
+                    <span>Wildcard Route:</span>
+                    <span className="text-sky-300 font-semibold truncate">
+                      {getTenantUrl(previewSlug || 'tenant-slug')}
+                    </span>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-1.5">
+                    {subdomainStatus.checking && (
+                      <span className="flex items-center gap-1 text-slate-400 text-[11px] font-sans">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
+                        Checking...
+                      </span>
+                    )}
+                    {!subdomainStatus.checking && subdomainStatus.available === true && (
+                      <span className="flex items-center gap-1 text-emerald-400 text-[11px] font-sans font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Available
+                      </span>
+                    )}
+                    {!subdomainStatus.checking && subdomainStatus.available === false && (
+                      <span className="flex items-center gap-1 text-rose-400 text-[11px] font-sans font-semibold">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {subdomainStatus.reason === 'RESERVED' ? 'Reserved Keyword' : 'Unavailable'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span className="text-sky-300 font-semibold truncate">
-                  https://{previewSlug}.medpath.org
-                </span>
+                {subdomainStatus.available === false && (
+                  <p className="text-[11px] font-sans text-rose-400 pl-6">{subdomainStatus.message}</p>
+                )}
               </div>
             </div>
 
@@ -582,7 +703,7 @@ export const OnboardingView = () => {
                 </h3>
                 <div className="flex items-center gap-1.5 text-xs text-sky-400 font-mono mt-0.5 truncate">
                   <Globe className="w-3.5 h-3.5 shrink-0" />
-                  <span>https://{previewSlug}.medpath.org</span>
+                  <span>{getTenantUrl(previewSlug || 'tenant-slug')}</span>
                 </div>
               </div>
             </div>

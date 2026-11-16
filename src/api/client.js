@@ -2,11 +2,33 @@ import axios from 'axios';
 
 // Get base API URL from local storage or environment or fallback to relative/default
 export const getBaseApiUrl = () => {
-  return   'https://medpathapi.smartschoolnepal.com/api/v1';
+  return (
+    localStorage.getItem('customApiUrl') ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+    'https://medpathapi.smartschoolnepal.com/api/v1'
+  );
 };
-const baseApiUrl = "https://medpathapi.smartschoolnepal.com/api/v1";
+
+// Get wildcard base domain (e.g. smartschoolnepal.com or localhost:3000)
+export const getBaseDomain = () => {
+  return (
+    localStorage.getItem('customBaseDomain') ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BASE_DOMAIN) ||
+    'smartschoolnepal.com'
+  );
+};
+
+// Construct tenant subdomain route
+export const getTenantUrl = (slug) => {
+  if (!slug) return '';
+  const domain = getBaseDomain();
+  const isLocal = domain.includes('localhost') || domain.includes('127.0.0.1');
+  const protocol = isLocal ? 'http' : 'https';
+  return `${protocol}://${slug}.${domain}`;
+};
+
 export const apiClient = axios.create({
-  baseURL: baseApiUrl,
+  baseURL: getBaseApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,7 +63,14 @@ export const superadminApi = {
     return res.data;
   },
 
-  // 2. Tenant Management
+  // 2. Tenant Management & Subdomain Availability
+  checkSubdomain: async (subdomain) => {
+    const res = await apiClient.get('/superadmin/tenants/check-subdomain', {
+      params: { subdomain: (subdomain || '').trim().toLowerCase() },
+    });
+    return res.data;
+  },
+
   listTenants: async (params = {}) => {
     const res = await apiClient.get('/superadmin/tenants', { params });
     return res.data;
