@@ -14,7 +14,7 @@ export const getBaseDomain = () => {
   return (
     localStorage.getItem('customBaseDomain') ||
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BASE_DOMAIN) ||
-    'smartschoolnepal.com'
+    'medpath.smartschoolnepal.com'
   );
 };
 

@@ -9,7 +9,7 @@ export const SettingsView = () => {
     localStorage.getItem('customApiUrl') || 'http://localhost:5000/api/v1'
   );
   const [baseDomain, setBaseDomain] = useState(
-    localStorage.getItem('customBaseDomain') || 'smartschoolnepal.com'
+    localStorage.getItem('customBaseDomain') || 'medpath.smartschoolnepal.com'
   );
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
